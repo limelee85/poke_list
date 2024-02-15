@@ -21,7 +21,7 @@ jobs:
       - name: Create a Gitpod workspace for the new branch
         id: create_workspace
         run: |
-          branchName=${{ GITHUB.ref_name }}
+          branchName=${{ github.head_ref }}
           repoFullName=${{ github.repository }}
           WORKSPACE_URL=$(./gitpod ws create github.com/$repoFullName/tree/$branchName --dont-wait)
           echo "BRANCH_NAME=$branchName" >> $GITHUB_ENV
@@ -35,5 +35,5 @@ jobs:
           ./gitpod ws stop ${{ env.WORKSPACE_URL }}
 
     environment:
-      name: ${{ GITHUB.ref_name }}
+      name: ${{ github.head_ref }}
       url: https://gitpod.io/start/#${{ env.WORKSPACE_URL }}
