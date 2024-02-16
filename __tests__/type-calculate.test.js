@@ -15,7 +15,6 @@ describe("formatTypeArray", () => {
       "×4": ["Grass"],
     };
     const result = formatTypeArray(typeArray);
-    console.log(result);
     expect(result).toEqual(expected);
   });
 

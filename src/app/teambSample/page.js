@@ -10,131 +10,6 @@ const pokemon = new Pokemon(gens, "Abra", {
 });
 console.log(pokemon);
 
-const natures = [
-  "Hardy",
-  "Lonely",
-  "Adamant",
-  "Naughty",
-  "Brave",
-  "Bold",
-  "Docile",
-  "Impish",
-  "Lax",
-  "Relaxed",
-  "Modest",
-  "Mild",
-  "Bashful",
-  "Rash",
-  "Quiet",
-  "Calm",
-  "Gentle",
-  "Careful",
-  "Quirky",
-  "Sassy",
-  "Timid",
-  "Hasty",
-  "Jolly",
-  "Naive",
-  "Serious",
-];
-
-function calcNature(nature) {
-  const stats = ["a", "b", "c", "d", "s"];
-  let res = { a: 1, b: 1, c: 1, d: 1, s: 1 };
-  const index = natures.findIndex((element) => element == nature);
-  Math.floor(index / 5) != index % 5 &&
-    ((res[stats[Math.floor(index / 5)]] = 1.1), (res[stats[index % 5]] = 0.9));
-  return res;
-}
-
-function calcH(base, lv, ev, iv) {
-  return Math.floor(((2 * base + iv + ev / 4 + 100) * lv) / 100 + 10);
-}
-
-function calcABCDS(base, lv, ev, iv, a) {
-  return Math.floor((((2 * base + iv + ev / 4) * lv) / 100 + 5) * a);
-}
-
-function calcRevH(stats, base, lv, iv = 0) {
-  iv = ((stats - 10) * 100) / lv - 100 - iv - 2 * base;
-  return iv > 0 ? iv : 0;
-}
-
-function calcRevABCDS(stats, base, lv, a, iv = 0) {
-  iv = Math.ceil(((stats / a - 5) / lv) * 100 - iv - 2 * base);
-  return iv > 0 ? iv : 0;
-}
-
-function calcEIv(stats, base, lv, nature) {
-  let res = {};
-  let totalev = 0;
-  let message = "success";
-
-  const affect = calcNature(nature);
-  for (const b in base) {
-    res[b] = {};
-    if (b == "h") {
-      if (stats[b] <= calcH(base[b], lv, 0, 31)) {
-        res[b]["iv"] = calcRevH(stats[b], base[b], lv);
-        res[b]["ev"] = 0;
-      } else {
-        res[b]["ev"] = 4 * calcRevH(stats[b], base[b], lv, 31);
-        res[b]["iv"] = 31;
-      }
-    } else {
-      if (stats[b] <= calcABCDS(base[b], lv, 0, 31, affect[b])) {
-        res[b]["iv"] = calcRevABCDS(stats[b], base[b], lv, affect[b]);
-        res[b]["ev"] = 0;
-      } else {
-        res[b]["ev"] = 4 * calcRevABCDS(stats[b], base[b], lv, affect[b], 31);
-        res[b]["iv"] = 31;
-      }
-    }
-    totalev += res[b]["ev"];
-    if (res[b]["ev"] > 255) {
-      message = "not exist pokemon";
-    }
-  }
-
-  if (totalev > 510 && message == "success") {
-    message = "ev > 510";
-  }
-
-  return { message: message, stats: res };
-}
-
-function calcStatsMinMax(base, lv, nature) {
-  let res = {};
-  const affect = calcNature(nature);
-  for (const b in base) {
-    res[b] = {};
-    if (b == "h") {
-      res[b]["min"] = calcH(base[b], lv, 0, 0);
-      res[b]["max"] = calcH(base[b], lv, 252, 31);
-    } else {
-      res[b]["min"] = calcABCDS(base[b], lv, 0, 0, affect[b]);
-      res[b]["max"] = calcABCDS(base[b], lv, 252, 31, affect[b]);
-    }
-  }
-
-  return res;
-}
-
-function calcHIvGen1(ivs) {
-  let res = 0;
-  const stats = ["s", "c", "b", "a"];
-
-  for (const b in ivs) {
-    res[b] = {};
-    if (b != "h" && b != "d") {
-      const squared = stats.findIndex((element) => element == b);
-      ivs[b] % 2 == 1 && (res += Math.pow(2, squared));
-    }
-  }
-
-  return res;
-}
-
 const YourComponent = () => {
   const [gen, setGen] = useState(9);
   const [lv, setLevel] = useState(50);
@@ -183,7 +58,7 @@ const YourComponent = () => {
   });
 
   const [statsMinMax, setMinMax] = useState(
-    calcStatsMinMax(base, lv, gen < 3 ? "" : nature)
+    calcStatsMinMax(base, lv, gen < 3 ? "" : nature),
   );
 
   useEffect(() => {
