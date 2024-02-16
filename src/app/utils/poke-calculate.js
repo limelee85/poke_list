@@ -31,6 +31,7 @@ export function calcNature(nature) {
  * @param {number} lv: 레벨
  * @param {number} ev: 노력치
  * @param {number} iv: 개체값
+ * @param {number} gen: 세대
  * @return {number} h
  * 체력 계산식
  * 체력 = ((2 * 종족값 + 개체값 + 노력치 / 4 + 100) * 레벨 / 100) + 10
@@ -55,21 +56,29 @@ export function calcH(base, lv, ev, iv) {
  * @param {number} ev: 노력치
  * @param {number} iv: 개체값
  * @param {number} a: 성격 보정치
+ * @param {number} gen: 세대
  * @return {number} a, b, c, d, s
  * 체력 이외의 스탯 계산식
  */
-export function calcABCDS(base, lv, ev, iv, a) {
+export function calcABCDS(base, lv, ev, iv, a, gen) {
   // 인수들이 숫자인지 확인
   if (
     typeof base !== "number" ||
     typeof lv !== "number" ||
     typeof ev !== "number" ||
     typeof iv !== "number" ||
-    typeof a !== "number"
+    typeof a !== "number" ||
+    typeof gen !== "number"
   ) {
     return;
   }
-  return Math.floor((((2 * base + iv + ev / 4) * lv) / 100 + 5) * a);
+  if (gen < 3) {
+    a = 1;
+  }
+
+  return Math.floor(
+    Math.floor(((2 * base + iv + Math.floor(ev / 4)) * lv) / 100 + 5) * a,
+  );
 }
 
 /*
@@ -90,7 +99,7 @@ export function calcRevH(stats, base, lv, iv = 0) {
   ) {
     return;
   }
-  iv = ((stats - 10) * 100) / lv - 100 - iv - 2 * base;
+  iv = Math.floor(((stats - 10) * 100) / lv - 100 - iv - 2 * base);
   return iv > 0 ? iv : 0;
 }
 
@@ -114,7 +123,8 @@ export function calcRevABCDS(stats, base, lv, a, iv = 0) {
   ) {
     return;
   }
-  iv = Math.ceil(((stats / a - 5) / lv) * 100 - iv - 2 * base);
+
+  iv = Math.floor(((Math.ceil(stats / a) - 5) * 100) / lv - iv - 2 * base);
   return iv > 0 ? iv : 0;
 }
 
@@ -122,22 +132,28 @@ export function calcRevABCDS(stats, base, lv, a, iv = 0) {
  * @param {object} stats rawStats, { h: number, a: number, b: number, c: number, d: number, s: number }
  * @param {object} base: species.baseStats, { h: number, a: number, b: number, c: number, d: number, s: number }
  * @param {number} lv
+ * @paran {number} gen
  * @param {string} nature
  * @return {object} { message: string, stats: object { h: number, a: number, b: number, c: number, d: number, s: number } }
  * 3세대 이상의 스탯 계산식
  */
-export function calcEIv(stats, base, lv, nature = "Serious") {
+export function calcEIv(stats, base, lv, nature = "Serious", gen) {
+  // lv, gen이 숫자인지 확인, 1~100 사이의 숫자인지 확인
+  if (typeof lv !== "number" || lv < 1 || lv > 100 || typeof gen !== "number") {
+    return;
+  }
+
+  // 1,2 세대인 경우 무보정 성격으로 설정
+  if (gen < 3) {
+    nature = "Serious";
+  }
+
   // 성격이 없는 경우 무보정 성격으로 설정
   const correctNature = PokeNaturesIndex[nature] ? nature : "Serious";
 
   let res = {};
   let totalev = 0;
   let message = "success";
-
-  // lv가 숫자인지 확인, 1~100 사이의 숫자인지 확인
-  if (typeof lv !== "number" || lv < 1 || lv > 100) {
-    return;
-  }
 
   const affect = calcNature(correctNature);
 
@@ -165,7 +181,7 @@ export function calcEIv(stats, base, lv, nature = "Serious") {
       }
     } else {
       // 체력 이외의 스탯
-      if (stats[b] <= calcABCDS(base[b], lv, 0, 31, affect[b])) {
+      if (stats[b] <= calcABCDS(base[b], lv, 0, 31, affect[b], gen)) {
         // rawStats이 계산된 스탯보다 작은 경우
         // 개체값은 0으로 설정 후 개체치 역산, 노력치 0
         res[b]["iv"] = calcRevABCDS(stats[b], base[b], lv, affect[b]);
@@ -198,6 +214,7 @@ export function calcEIv(stats, base, lv, nature = "Serious") {
  * @param {object} base
  * @param {number} lv
  * @param {string} nature
+ * @param {number} gen
  * @return {object} {
  * h: { min: number, max: number },
  * a: { min: number, max: number },
@@ -207,7 +224,7 @@ export function calcEIv(stats, base, lv, nature = "Serious") {
  * s: { min: number, max: number } }
  * 최소, 최대 스탯 계산, 3세대 이상의 계산식
  */
-export function calcStatsMinMax(base, lv, nature = "Serious") {
+export function calcStatsMinMax(base, lv, nature = "Serious", gen) {
   // 성격이 없는 경우 무보정 성격으로 설정
   const correctNature = PokeNaturesIndex[nature] ? nature : "Serious";
   let res = {};
@@ -232,8 +249,8 @@ export function calcStatsMinMax(base, lv, nature = "Serious") {
       res[b]["max"] = calcH(base[b], lv, 252, 31);
     } else {
       // 체력 이외의 스탯
-      res[b]["min"] = calcABCDS(base[b], lv, 0, 0, affect[b]);
-      res[b]["max"] = calcABCDS(base[b], lv, 252, 31, affect[b]);
+      res[b]["min"] = calcABCDS(base[b], lv, 0, 0, affect[b], gen);
+      res[b]["max"] = calcABCDS(base[b], lv, 252, 31, affect[b], gen);
     }
   }
 
@@ -256,12 +273,36 @@ export function calcHIvGen1(ivs) {
   };
 
   for (const b in ivs) {
-    res[b] = {};
     if (b != "h" && b != "d") {
       const squared = stats[b];
-      ivs[b] % 2 == 1 && (res += Math.pow(2, squared));
+      ivs[b]["dv"] % 2 == 1 && (res += Math.pow(2, squared));
     }
   }
 
+  return res;
+}
+
+/*
+ * @param {object} eiv
+ * @param {number} gen
+ * @return {number} res
+ * @return {object}
+ * 1,2 <-> 3~9 세대 간 스탯 연동
+ */
+export function transEIV(eiv, gen) {
+  let res = {};
+  if (gen < 3) {
+    for (let b in eiv) {
+      res[b] = {};
+      res[b]["ev"] = Math.floor(Math.sqrt(eiv[b]["exp"]));
+      res[b]["iv"] = 2 * eiv[b]["dv"];
+    }
+  } else {
+    for (let b in eiv) {
+      res[b] = {};
+      res[b]["exp"] = Math.pow(eiv[b]["ev"], 2);
+      res[b]["dv"] = Math.floor(eiv[b]["iv"] / 2);
+    }
+  }
   return res;
 }
